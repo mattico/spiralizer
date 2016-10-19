@@ -1,0 +1,8 @@
+[package]
+name = "spiralizer"
+version = "0.1.0"
+authors = ["Matt Ickstadt <mattico8@gmail.com>"]
+
+[dependencies]
+image = "0.10"
+clap = "2.14"
