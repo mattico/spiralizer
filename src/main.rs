@@ -1,12 +1,14 @@
 
 extern crate clap;
 extern crate image;
+extern crate memmap;
 
 use std::path::{PathBuf, Path};
 use std::process::exit;
 use std::f64::consts::PI;
 
 use image::{GenericImage, DynamicImage, ImageFormat, RgbImage, ImageBuffer};
+use memmap::{Mmap, Protection};
 
 const APP_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const APP_AUTHORS: &'static str = env!("CARGO_PKG_AUTHORS");
@@ -47,24 +49,26 @@ fn main() {
         unreachable!();
     };
 
-    let frames: Vec<RgbImage> = input_files.iter().filter_map(|f| match image::open(f) {
-        Ok(image) => Some(image.to_rgb()),
-        Err(_) => {
-            println!("Unable to open file as image, ignoring: '{}'", f.to_string_lossy());
-            None
-        },
-    }).collect();
-
-    if frames.len() > 1 {
-        println!("{} frames loaded", frames.len());
+    if input_files.len() > 1 {
         spiralize(&input_files, &out_dir);
     } else {
-        println!("Not enough frames loaded");
+        println!("Not enough frames provided");
         exit(0);
     }
 }
 
 fn spiralize(frames: &Vec<PathBuf>, out_dir: &PathBuf) {   
+    let frames: Vec<RgbImage> = frames.iter().filter_map(|f| {
+        let mmap = Mmap::open_path(f, Protection::Read).unwrap();
+        match image::load_from_memory(unsafe { mmap.as_slice() }) {
+            Ok(img) => Some(img.to_rgb()),
+            Err(_) => {
+                println!("Unable to open file as image, ignoring: '{}'", f.to_string_lossy());
+                None
+            },
+        }
+    }).collect();
+
     let width = frames[0].width();
     let height = frames[0].height();
 
@@ -72,16 +76,13 @@ fn spiralize(frames: &Vec<PathBuf>, out_dir: &PathBuf) {
     let mut percent = 0;
 
     for i in 0..frames.len() {
-        let mut frame_offset = i;
         for (x, y, pixel) in output.enumerate_pixels_mut() {
             let pixel_angle = f64::atan2((width/2 - x) as f64, (height/2 - y) as f64);
-            let source_frame: usize = ((pixel_angle / (2f64*PI)) 
-                * frames.len() as f64 + frame_offset as f64) as usize;
+            let source_frame: usize = (((pixel_angle / (2f64*PI)) 
+                * frames.len() as f64 + i as f64).floor()) as usize;
             *pixel = *frames[source_frame].get_pixel(x, y);
-            frame_offset += 1;
         }
-
-        output.save(out_dir.join(format!("frame_{}.png", i)).to_str().unwrap());
+        output.save(out_dir.join(format!("frame_{}.png", i)).to_str().unwrap()).unwrap();
 
         let new_percent = i * 100 / frames.len();
         if new_percent > percent {

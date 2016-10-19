@@ -5,4 +5,5 @@ authors = ["Matt Ickstadt <mattico8@gmail.com>"]
 
 [dependencies]
 image = "0.10"
-clap = "2.14"
+clap = "2"
+memmap = "0.4"
