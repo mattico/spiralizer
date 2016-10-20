@@ -37,13 +37,14 @@ fn main() {
         }
     };
 
-    let input_files: Vec<PathBuf> = if let Some(dir) = matches.value_of("INPUT") {
+    let mut input_files: Vec<PathBuf> = if let Some(dir) = matches.value_of("INPUT") {
         let d = PathBuf::from(dir);
         assert_is_dir(&d);
         d.read_dir().unwrap().map(|x| x.unwrap().path()).collect()
     } else {
         unreachable!();
     };
+    input_files.sort();
 
     let out_dir: PathBuf = if let Some(dir) = matches.value_of("OUTPUT") {
         let d = PathBuf::from(dir);
@@ -100,13 +101,16 @@ fn spiralize(input_files: &Vec<PathBuf>, out_dir: &PathBuf) {
             let two_pi = 2f64 * PI;
             let c_x = (height/2) as i32 - y as i32;
             let c_y = (width/2) as i32 - x as i32;
-            let pixel_angle = f64::atan2(c_x as f64, c_y as f64) + two_pi;
+            let mut pixel_angle = f64::atan2(c_x as f64, c_y as f64);
+            if pixel_angle < 0.0 {
+                pixel_angle += two_pi;
+            }
             let angle_modifier = i as f64 / frames.len() as f64 * two_pi;
             let time_of_day = ((pixel_angle + angle_modifier) % two_pi) / two_pi;
             let source_frame: usize = (time_of_day * frames.len() as f64).floor() as usize;
             *pixel = *frames[source_frame].get_pixel(x, y);
         }
-        output.save(out_dir.join(format!("frame_{}.png", i)).to_str().unwrap()).unwrap();
+        output.save(out_dir.join(format!("frame_{:04}.png", i)).to_str().unwrap()).unwrap();
 
         progress_bar.inc();
     }
