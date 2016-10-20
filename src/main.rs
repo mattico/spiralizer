@@ -85,7 +85,6 @@ fn spiralize(frames: &Vec<PathBuf>, out_dir: &PathBuf) {
         mmap_file_path.set_extension("bin");
         let mut mmap_file = File::create(&mmap_file_path).unwrap();
         mmap_file.write_all(&*rgb_image.into_raw()).unwrap();
-        mmap_file.flush().unwrap();
         Some(Mmap::open_path(&mmap_file_path, Protection::Read).unwrap())
     }).collect();
 
@@ -99,7 +98,7 @@ fn spiralize(frames: &Vec<PathBuf>, out_dir: &PathBuf) {
     for i in 0..frames.len() {
         for (x, y, pixel) in output.enumerate_pixels_mut() {
             let two_pi = 2f64 * PI;
-            let pixel_angle = f64::atan2((width/2 - x) as f64, (height/2 - y) as f64) + two_pi;
+            let pixel_angle = f64::atan2(((width/2) - x) as f64, ((height/2) - y) as f64) + two_pi;
             let angle_modifier = i as f64 / frames.len() as f64 * two_pi;
             let time_of_day = ((pixel_angle + angle_modifier) % two_pi) / two_pi;
             let source_frame: usize = (time_of_day * frames.len() as f64).floor() as usize;
@@ -110,5 +109,5 @@ fn spiralize(frames: &Vec<PathBuf>, out_dir: &PathBuf) {
         progress_bar.inc();
     }
 
-    progress_bar.finish_print("done");
+    progress_bar.finish_print(&format!("Saved {} images to {}\n", frames.len(), out_dir.to_string_lossy()));
 }
