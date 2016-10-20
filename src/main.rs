@@ -1,15 +1,18 @@
 extern crate clap;
 extern crate image;
 extern crate memmap;
+extern crate pbr;
+extern crate tempdir;
 
-use std::path::{PathBuf, Path};
-use std::process::exit;
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::prelude::*;
+use std::path::PathBuf;
+use std::process::exit;
 
-use image::{Rgb, DynamicImage, ImageFormat, RgbImage, ImageBuffer};
+use image::{Rgb, RgbImage, ImageBuffer};
 use memmap::{Mmap, Protection};
+use tempdir::TempDir;
 
 const APP_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const APP_AUTHORS: &'static str = env!("CARGO_PKG_AUTHORS");
@@ -58,49 +61,54 @@ fn main() {
     }
 }
 
-fn mmap_image_buffer(file: &PathBuf) -> Option<ImageBuffer<Rgb<u8>, &[u8]>> {
-    let rgb_image = match image::open(file) {
-        Ok(img) => img.to_rgb(),
-        Err(_) => {
-            println!("Unable to open file as image, ignoring: '{}'", file.to_string_lossy());
-            return None;
-        },
-    };
-    let width = rgb_image.width();
-    let height = rgb_image.height();
-
-    let mut mmap_file_path = file.clone();
-    mmap_file_path.set_extension("bin");
-    let mut mmap_file = File::create(mmap_file_path).unwrap();
-    mmap_file.write_all(&*rgb_image.into_raw()).unwrap();
-    let mmap = Mmap::open(&mmap_file, Protection::Read).unwrap();
-    forget(mmap);
-
-    ImageBuffer::from_raw(width, height, unsafe{mmap.as_slice()})
-}
-
 fn spiralize(frames: &Vec<PathBuf>, out_dir: &PathBuf) {   
-    let frames: Vec<ImageBuffer<Rgb<u8>, &[u8]>> = frames.iter().filter_map(mmap_image_buffer).collect();
+    let mut width = 0;
+    let mut height = 0;
+    let temp_dir = TempDir::new("spiralizer").unwrap();
 
-    let width = frames[0].width();
-    let height = frames[0].height();
+    let maps: Vec<Mmap> = frames.iter().filter_map(|file| {
+        let rgb_image = match image::open(file) {
+            Ok(img) => img.to_rgb(),
+            Err(_) => {
+                println!("Unable to open file as image, ignoring: '{}'", file.to_string_lossy());
+                return None;
+            },
+        };
+        if width == 0 && height == 0 {
+            width = rgb_image.width();
+            height = rgb_image.height();
+        } else if width != rgb_image.width() || height != rgb_image.height() {
+            println!("Images must all be the same size");
+            exit(0);
+        }
+        let mut mmap_file_path = temp_dir.path().join(file.file_name().unwrap());
+        mmap_file_path.set_extension("bin");
+        let mut mmap_file = File::create(&mmap_file_path).unwrap();
+        mmap_file.write_all(&*rgb_image.into_raw()).unwrap();
+        mmap_file.flush().unwrap();
+        Some(Mmap::open_path(&mmap_file_path, Protection::Read).unwrap())
+    }).collect();
+
+    let frames: Vec<ImageBuffer<Rgb<u8>, &[u8]>> = maps.iter()
+        .filter_map(|m| ImageBuffer::from_raw(width, height, unsafe { m.as_slice() }))
+        .collect();
 
     let mut output = RgbImage::new(width, height);
-    let mut percent = 0;
+    let mut progress_bar = pbr::ProgressBar::new(frames.len() as u64);
 
     for i in 0..frames.len() {
         for (x, y, pixel) in output.enumerate_pixels_mut() {
-            let pixel_angle = f64::atan2((width/2 - x) as f64, (height/2 - y) as f64);
-            let source_frame: usize = (((pixel_angle / (2f64*PI)) 
-                * frames.len() as f64 + i as f64).floor()) as usize;
+            let two_pi = 2f64 * PI;
+            let pixel_angle = f64::atan2((width/2 - x) as f64, (height/2 - y) as f64) + two_pi;
+            let angle_modifier = i as f64 / frames.len() as f64 * two_pi;
+            let time_of_day = ((pixel_angle + angle_modifier) % two_pi) / two_pi;
+            let source_frame: usize = (time_of_day * frames.len() as f64).floor() as usize;
             *pixel = *frames[source_frame].get_pixel(x, y);
         }
         output.save(out_dir.join(format!("frame_{}.png", i)).to_str().unwrap()).unwrap();
 
-        let new_percent = i * 100 / frames.len();
-        if new_percent > percent {
-            percent = new_percent;
-            println!("{}%", percent);
-        }
+        progress_bar.inc();
     }
+
+    progress_bar.finish_print("done");
 }

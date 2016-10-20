@@ -4,6 +4,14 @@ version = "0.1.0"
 authors = ["Matt Ickstadt <mattico8@gmail.com>"]
 
 [dependencies]
-image = "0.10"
 clap = "2"
+image = "0.10"
 memmap = "0.4"
+pbr = "0.3"
+tempdir = "0.3"
+
+[profile.dev]
+debug = true
+
+[profile.release]
+debug = true
