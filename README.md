@@ -2,6 +2,8 @@
 
 Helps to create gifs like [this](https://www.reddit.com/r/gifs/comments/4xdfa9/timescape_halls_harbour_nova_scotia/).
 
+Inspired by [this program from the Reddit thread](https://github.com/lgommans/TimeCircle).
+
 Doesn't currently handle video frame extraction or creation.
 
 ## Usage
