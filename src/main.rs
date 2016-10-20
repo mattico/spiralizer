@@ -98,7 +98,9 @@ fn spiralize(frames: &Vec<PathBuf>, out_dir: &PathBuf) {
     for i in 0..frames.len() {
         for (x, y, pixel) in output.enumerate_pixels_mut() {
             let two_pi = 2f64 * PI;
-            let pixel_angle = f64::atan2(((width/2) - x) as f64, ((height/2) - y) as f64) + two_pi;
+            let c_x = (height/2) as i32 - y as i32;
+            let c_y = (width/2) as i32 - x as i32;
+            let pixel_angle = f64::atan2(c_x as f64, c_y as f64) + two_pi;
             let angle_modifier = i as f64 / frames.len() as f64 * two_pi;
             let time_of_day = ((pixel_angle + angle_modifier) % two_pi) / two_pi;
             let source_frame: usize = (time_of_day * frames.len() as f64).floor() as usize;
