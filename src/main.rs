@@ -61,12 +61,12 @@ fn main() {
     }
 }
 
-fn spiralize(frames: &Vec<PathBuf>, out_dir: &PathBuf) {   
+fn spiralize(input_files: &Vec<PathBuf>, out_dir: &PathBuf) {   
     let mut width = 0;
     let mut height = 0;
     let temp_dir = TempDir::new("spiralizer").unwrap();
 
-    let maps: Vec<Mmap> = frames.iter().filter_map(|file| {
+    let mmaps: Vec<Mmap> = input_files.iter().filter_map(|file| {
         let rgb_image = match image::open(file) {
             Ok(img) => img.to_rgb(),
             Err(_) => {
@@ -88,7 +88,7 @@ fn spiralize(frames: &Vec<PathBuf>, out_dir: &PathBuf) {
         Some(Mmap::open_path(&mmap_file_path, Protection::Read).unwrap())
     }).collect();
 
-    let frames: Vec<ImageBuffer<Rgb<u8>, &[u8]>> = maps.iter()
+    let frames: Vec<ImageBuffer<Rgb<u8>, &[u8]>> = mmaps.iter()
         .filter_map(|m| ImageBuffer::from_raw(width, height, unsafe { m.as_slice() }))
         .collect();
 
