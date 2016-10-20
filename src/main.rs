@@ -10,7 +10,7 @@ use std::io::prelude::*;
 use std::path::PathBuf;
 use std::process::exit;
 
-use image::{Rgb, RgbImage, ImageBuffer};
+use image::{Rgb, RgbImage, ImageBuffer, Pixel};
 use memmap::{Mmap, Protection};
 use tempdir::TempDir;
 
@@ -114,8 +114,30 @@ fn spiralize(input_files: &Vec<PathBuf>, out_dir: &PathBuf) {
             }
             let angle_modifier = i as f64 / frames.len() as f64 * two_pi;
             let time_of_day = ((pixel_angle + angle_modifier) % two_pi) / two_pi;
-            let source_frame: usize = (time_of_day * frames.len() as f64).floor() as usize;
-            *pixel = *frames[source_frame].get_pixel(x, y);
+            let source_frame_frac = time_of_day * frames.len() as f64;
+            let source_frame_round = source_frame_frac.round();
+            let source_frame = source_frame_frac.floor() as isize;
+
+            let blend_source_frame = if source_frame_frac > source_frame_round {
+                source_frame - 1
+            } else {
+                source_frame + 1
+            };
+
+            if blend_source_frame < 0 || blend_source_frame >= frames.len() as isize {
+                *pixel = *frames[source_frame as usize].get_pixel(x, y);
+                continue;
+            } 
+
+            let blend_val = (source_frame_frac - source_frame_round).abs();
+
+            let mut main_pixel = frames[source_frame as usize].get_pixel(x, y).to_rgba();
+            let mut blend_pixel = frames[blend_source_frame as usize].get_pixel(x, y).to_rgba();
+
+            blend_pixel[3] = (blend_val * 256.0) as u8;
+            main_pixel.blend(&blend_pixel);
+
+            *pixel = main_pixel.to_rgb();
         }
         output.save(out_dir.join(format!("frame_{:04}.png", i)).to_str().unwrap()).unwrap();
         save_progress_bar.inc();
