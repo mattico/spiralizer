@@ -28,21 +28,11 @@ Output images will be saved in PNG format.
 ## Video Conversion With FFMpeg
 
 Video to images:
-ffmpeg -i video.mp4 -vf fps=1 frame_%04d.png
-Adjust fps= to change how often frames are saved from the video.
+`fmpeg -i video.mp4 -vf fps=1 frame_%04d.png`
+Adjust `fps=` to change how often frames are saved from the video.
 
 Basic images to video:
-ffmpeg -i frame%04d.png out.mp4
+`ffmpeg -i frame%04d.png out.mp4`
 
 Recommended images to video settings:
-ffmpeg -i frame%04d.png -framerate 60 -c:v libx264 -r 60 -pix_fmt yuv420p -profile slow -crf 19 out.mp4between images and video:
-
-Video to images:
-ffmpeg -i video.mp4 -vf fps=1 frame_%04d.png
-Adjust fps= to change how often frames are saved from the video.
-
-Basic images to video:
-ffmpeg -i frame%04d.png out.mp4
-
-Recommended images to video settings:
-ffmpeg -i frame%04d.png -framerate 60 -c:v libx264 -r 60 -pix_fmt yuv420p profile slow -crf 19 out.mp4
+`ffmpeg -i frame%04d.png -framerate 60 -c:v libx264 -r 60 -pix_fmt yuv420p -profile slow -crf 19 out.mp4`
