@@ -41,4 +41,4 @@ Basic images to video:
 `ffmpeg -i frame%04d.png out.mp4`
 
 Recommended images to video settings:
-`ffmpeg -i frame%04d.png -framerate 60 -c:v libx264 -r 60 -pix_fmt yuv420p -profile slow -crf 19 out.mp4`
+`ffmpeg -i frame%04d.png -framerate 60 -c:v libx264 -r 60 -pix_fmt yuv420p -preset slow -crf 19 out.mp4`
