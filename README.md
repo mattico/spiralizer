@@ -4,7 +4,11 @@ Helps to create gifs like [this](https://www.reddit.com/r/gifs/comments/4xdfa9/t
 
 Inspired by [this program from the Reddit thread](https://github.com/lgommans/TimeCircle).
 
-Doesn't currently handle video frame extraction or creation.
+## Limitations
+- Doesn't currently handle video frame extraction or creation
+- Animated GIFs don't work as expected
+- Blending between frames is weird
+- No macOS build
 
 ## Usage
 ```
