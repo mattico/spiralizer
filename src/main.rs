@@ -22,42 +22,42 @@ fn main() {
         .version(APP_VERSION)
         .author(APP_AUTHORS)
         .about("Helps create a swirly timelapse gif")
+        .after_help("Supported input formats: PNG JPG GIF ICO BMP\n\
+                     Output images will be saved in PNG format.")
         .arg(clap::Arg::with_name("INPUT")
-            .help("A directory full of video frames to use")
+            .help("A directory full of images to use")
             .required(true))
         .arg(clap::Arg::with_name("OUTPUT")
-            .help("A directory to output the video frames to")
+            .help("A directory to output the images to")
             .required(true))
         .get_matches();
 
     let assert_is_dir = |d: &PathBuf| {
         if !d.is_dir() {
-            println!("Argument must be directory");
+            println!("ERROR: Arguments must be directories.\n{} is not a directory", d.to_string_lossy());
             exit(0);
         }
     };
 
-    let mut input_files: Vec<PathBuf> = if let Some(dir) = matches.value_of("INPUT") {
+    let mut input_files: Vec<PathBuf> = {
+        let dir = matches.value_of("INPUT").unwrap();
         let d = PathBuf::from(dir);
         assert_is_dir(&d);
         d.read_dir().unwrap().map(|x| x.unwrap().path()).collect()
-    } else {
-        unreachable!();
     };
     input_files.sort();
 
-    let out_dir: PathBuf = if let Some(dir) = matches.value_of("OUTPUT") {
+    let out_dir: PathBuf = {
+        let dir = matches.value_of("OUTPUT").unwrap();
         let d = PathBuf::from(dir);
         assert_is_dir(&d);
         d
-    } else {
-        unreachable!();
     };
 
     if input_files.len() > 1 {
         spiralize(&input_files, &out_dir);
     } else {
-        println!("Not enough frames provided");
+        println!("ERROR: Not enough valid frames provided. Need at least 2.");
         exit(0);
     }
 }
@@ -67,34 +67,41 @@ fn spiralize(input_files: &Vec<PathBuf>, out_dir: &PathBuf) {
     let mut height = 0;
     let temp_dir = TempDir::new("spiralizer").unwrap();
 
+    println!("= Loading images =");
+
+    let mut load_progress_bar = pbr::ProgressBar::new(input_files.len() as u64);
+
     let mmaps: Vec<Mmap> = input_files.iter().filter_map(|file| {
         let rgb_image = match image::open(file) {
             Ok(img) => img.to_rgb(),
-            Err(_) => {
-                println!("Unable to open file as image, ignoring: '{}'", file.to_string_lossy());
-                return None;
-            },
+            Err(_) => return None,
         };
         if width == 0 && height == 0 {
             width = rgb_image.width();
             height = rgb_image.height();
         } else if width != rgb_image.width() || height != rgb_image.height() {
-            println!("Images must all be the same size");
+            println!("ERROR: Images must all be the same size.");
             exit(0);
         }
         let mut mmap_file_path = temp_dir.path().join(file.file_name().unwrap());
         mmap_file_path.set_extension("bin");
         let mut mmap_file = File::create(&mmap_file_path).unwrap();
         mmap_file.write_all(&*rgb_image.into_raw()).unwrap();
+        load_progress_bar.inc();
         Some(Mmap::open_path(&mmap_file_path, Protection::Read).unwrap())
     }).collect();
+
+    load_progress_bar.finish_print(
+        &format!("Loaded {} images. {} files ignored.\n", mmaps.len(), input_files.len() - mmaps.len()));
 
     let frames: Vec<ImageBuffer<Rgb<u8>, &[u8]>> = mmaps.iter()
         .filter_map(|m| ImageBuffer::from_raw(width, height, unsafe { m.as_slice() }))
         .collect();
 
     let mut output = RgbImage::new(width, height);
-    let mut progress_bar = pbr::ProgressBar::new(frames.len() as u64);
+    let mut save_progress_bar = pbr::ProgressBar::new(frames.len() as u64);
+
+    println!("= Saving images =");
 
     for i in 0..frames.len() {
         for (x, y, pixel) in output.enumerate_pixels_mut() {
@@ -111,9 +118,9 @@ fn spiralize(input_files: &Vec<PathBuf>, out_dir: &PathBuf) {
             *pixel = *frames[source_frame].get_pixel(x, y);
         }
         output.save(out_dir.join(format!("frame_{:04}.png", i)).to_str().unwrap()).unwrap();
-
-        progress_bar.inc();
+        save_progress_bar.inc();
     }
 
-    progress_bar.finish_print(&format!("Saved {} images to {}\n", frames.len(), out_dir.to_string_lossy()));
+    save_progress_bar.finish_print(
+        &format!("Saved {} images to {}\n", frames.len(), out_dir.to_string_lossy()));
 }
