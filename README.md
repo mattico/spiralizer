@@ -1,3 +1,6 @@
+![example](https://thumbs.gfycat.com/AnimatedRadiantGhostshrimp-size_restricted.gif)
+> *[high quality](https://gfycat.com/AnimatedRadiantGhostshrimp)*
+
 # Spiralizer
 
 Helps to create gifs like [this](https://www.reddit.com/r/gifs/comments/4xdfa9/timescape_halls_harbour_nova_scotia/).
