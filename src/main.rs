@@ -2,7 +2,7 @@ extern crate clap;
 extern crate image;
 extern crate memmap;
 extern crate pbr;
-extern crate tempdir;
+extern crate tempfile;
 
 use std::f64::consts::PI;
 use std::fs::File;
@@ -11,8 +11,8 @@ use std::path::PathBuf;
 use std::process::exit;
 
 use image::{Rgb, RgbImage, ImageBuffer, Pixel};
-use memmap::{Mmap, Protection};
-use tempdir::TempDir;
+use memmap::Mmap;
+use tempfile::TempDir;
 
 const APP_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const APP_AUTHORS: &'static str = env!("CARGO_PKG_AUTHORS");
@@ -65,7 +65,7 @@ fn main() {
 fn spiralize(input_files: &Vec<PathBuf>, out_dir: &PathBuf) {   
     let mut width = 0;
     let mut height = 0;
-    let temp_dir = TempDir::new("spiralizer").unwrap();
+    let temp_dir = TempDir::new_in("spiralizer").unwrap();
 
     println!("= Loading images =");
 
@@ -88,14 +88,14 @@ fn spiralize(input_files: &Vec<PathBuf>, out_dir: &PathBuf) {
         let mut mmap_file = File::create(&mmap_file_path).unwrap();
         mmap_file.write_all(&*rgb_image.into_raw()).unwrap();
         load_progress_bar.inc();
-        Some(Mmap::open_path(&mmap_file_path, Protection::Read).unwrap())
+        Some(unsafe { Mmap::map(&mmap_file).unwrap() })
     }).collect();
 
     load_progress_bar.finish_print(
         &format!("Loaded {} images. {} files ignored.\n", mmaps.len(), input_files.len() - mmaps.len()));
 
     let frames: Vec<ImageBuffer<Rgb<u8>, &[u8]>> = mmaps.iter()
-        .filter_map(|m| ImageBuffer::from_raw(width, height, unsafe { m.as_slice() }))
+        .filter_map(|m| ImageBuffer::from_raw(width, height, m.as_ref()))
         .collect();
 
     let mut output = RgbImage::new(width, height);

@@ -9,10 +9,10 @@ license = "MIT"
 
 [dependencies]
 clap = "2"
-image = "0.10"
-memmap = "0.4"
-pbr = "0.3"
-tempdir = "0.3"
+image = "0.23"
+memmap = "0.7"
+pbr = "1"
+tempfile = "3"
 
 [profile.dev]
 debug = true
