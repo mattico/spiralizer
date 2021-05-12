@@ -1,6 +1,6 @@
 [package]
 name = "spiralizer"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Matt Ickstadt <mattico8@gmail.com>"]
 description = "Helps create a swirly timelapse gif"
 repository = "https://github.com/mattico/spiralizer"
