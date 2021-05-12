@@ -84,7 +84,7 @@ fn spiralize(input_files: &Vec<PathBuf>, out_dir: &PathBuf) {
         .iter()
         .filter_map(|file| {
             let rgb_image = match image::open(file) {
-                Ok(img) => img.to_rgb(),
+                Ok(img) => img.to_rgb8(),
                 Err(_) => return None,
             };
             if width == 0 && height == 0 {
