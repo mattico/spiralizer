@@ -1,9 +1,3 @@
-extern crate clap;
-extern crate image;
-extern crate memmap;
-extern crate pbr;
-extern crate tempfile;
-
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::prelude::*;

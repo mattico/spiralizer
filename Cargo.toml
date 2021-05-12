@@ -6,6 +6,7 @@ description = "Helps create a swirly timelapse gif"
 repository = "https://github.com/mattico/spiralizer"
 keywords = ["image", "gif"]
 license = "MIT"
+edition = "2018"
 
 [dependencies]
 clap = "2"
